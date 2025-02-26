@@ -17,3 +17,11 @@ bloomy-server = "bloomy_mcp.server:main"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.black]
+line-length = 110
+
+[project.optional-dependencies]
+dev = [
+    "black>=23.0.0",
+]
