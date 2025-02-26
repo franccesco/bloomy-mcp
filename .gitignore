@@ -25,6 +25,7 @@ venv/
 env/
 ENV/
 .env
+.venv
 
 # Editor files
 .idea/
@@ -43,3 +44,7 @@ Thumbs.db
 
 # Project specific
 claude_desktop_config.json
+
+# Docker
+.dockerignore
+docker-compose.override.yml
