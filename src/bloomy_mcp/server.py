@@ -91,8 +91,11 @@ def get_available_mutations():
 
 # Tools for getting operation details and execution
 @mcp.tool()
-def get_query_details(query_name: str):
-    """Get detailed information about a specific query including required arguments and return type structure"""
+def get_query_details(query_names: str):
+    """
+    Get detailed information about specific queries including required arguments and return type structure.
+    Accepts a comma-separated list of query names.
+    """
     query_details_query = gql(
         """
     {
@@ -138,51 +141,64 @@ def get_query_details(query_name: str):
     try:
         result = client.execute(query_details_query)
 
-        # Find the specific query
-        query_info = None
-        for field in result["__type"]["fields"]:
-            if field["name"] == query_name:
-                query_info = field
-                break
+        # Parse the list of query names
+        query_name_list = [name.strip() for name in query_names.split(",")]
 
-        if not query_info:
-            return f"Query '{query_name}' not found"
+        # Collect all requested queries
+        all_details = {}
 
-        # Format arguments
-        args = []
-        for arg in query_info["args"]:
-            type_info = format_type_info(arg["type"])
-            args.append(
-                {
-                    "name": arg["name"],
-                    "description": arg["description"] or "No description",
-                    "type": type_info,
-                    "required": type_info.endswith("!"),
-                    "defaultValue": arg["defaultValue"],
-                }
-            )
+        for query_name in query_name_list:
+            # Find the specific query
+            query_info = None
+            for field in result["__type"]["fields"]:
+                if field["name"] == query_name:
+                    query_info = field
+                    break
 
-        # Format return type
-        return_type = format_type_info(query_info["type"])
+            if not query_info:
+                all_details[query_name] = f"Query '{query_name}' not found"
+                continue
 
-        # Create result structure
-        details = {
-            "name": query_name,
-            "description": query_info["description"] or "No description",
-            "arguments": args,
-            "returnType": return_type,
-            "example": generate_query_example(query_name, args),
-        }
+            # Format arguments
+            args = []
+            for arg in query_info["args"]:
+                type_info = format_type_info(arg["type"])
+                args.append(
+                    {
+                        "name": arg["name"],
+                        "description": arg["description"] or "No description",
+                        "type": type_info,
+                        "required": type_info.endswith("!"),
+                        "defaultValue": arg["defaultValue"],
+                    }
+                )
 
-        return yaml.dump(details, sort_keys=False)
+            # Format return type
+            return_type = format_type_info(query_info["type"])
+
+            # Create result structure
+            details = {
+                "name": query_name,
+                "description": query_info["description"] or "No description",
+                "arguments": args,
+                "returnType": return_type,
+                "example": generate_query_example(query_name, args),
+            }
+
+            all_details[query_name] = details
+
+        return yaml.dump(all_details, sort_keys=False)
 
     except Exception as e:
         return f"Error getting query details: {str(e)}"
 
 
 @mcp.tool()
-def get_mutation_details(mutation_name: str):
-    """Get detailed information about a specific mutation including required arguments and return type structure"""
+def get_mutation_details(mutation_names: str):
+    """
+    Get detailed information about specific mutations including required arguments and return type structure.
+    Accepts a comma-separated list of mutation names.
+    """
     mutation_details_query = gql(
         """
     {
@@ -228,43 +244,53 @@ def get_mutation_details(mutation_name: str):
     try:
         result = client.execute(mutation_details_query)
 
-        # Find the specific mutation
-        mutation_info = None
-        for field in result["__type"]["fields"]:
-            if field["name"] == mutation_name:
-                mutation_info = field
-                break
+        # Parse the list of mutation names
+        mutation_name_list = [name.strip() for name in mutation_names.split(",")]
 
-        if not mutation_info:
-            return f"Mutation '{mutation_name}' not found"
+        # Collect all requested mutations
+        all_details = {}
 
-        # Format arguments
-        args = []
-        for arg in mutation_info["args"]:
-            type_info = format_type_info(arg["type"])
-            args.append(
-                {
-                    "name": arg["name"],
-                    "description": arg["description"] or "No description",
-                    "type": type_info,
-                    "required": type_info.endswith("!"),
-                    "defaultValue": arg["defaultValue"],
-                }
-            )
+        for mutation_name in mutation_name_list:
+            # Find the specific mutation
+            mutation_info = None
+            for field in result["__type"]["fields"]:
+                if field["name"] == mutation_name:
+                    mutation_info = field
+                    break
 
-        # Format return type
-        return_type = format_type_info(mutation_info["type"])
+            if not mutation_info:
+                all_details[mutation_name] = f"Mutation '{mutation_name}' not found"
+                continue
 
-        # Create result structure
-        details = {
-            "name": mutation_name,
-            "description": mutation_info["description"] or "No description",
-            "arguments": args,
-            "returnType": return_type,
-            "example": generate_mutation_example(mutation_name, args),
-        }
+            # Format arguments
+            args = []
+            for arg in mutation_info["args"]:
+                type_info = format_type_info(arg["type"])
+                args.append(
+                    {
+                        "name": arg["name"],
+                        "description": arg["description"] or "No description",
+                        "type": type_info,
+                        "required": type_info.endswith("!"),
+                        "defaultValue": arg["defaultValue"],
+                    }
+                )
 
-        return yaml.dump(details, sort_keys=False)
+            # Format return type
+            return_type = format_type_info(mutation_info["type"])
+
+            # Create result structure
+            details = {
+                "name": mutation_name,
+                "description": mutation_info["description"] or "No description",
+                "arguments": args,
+                "returnType": return_type,
+                "example": generate_mutation_example(mutation_name, args),
+            }
+
+            all_details[mutation_name] = details
+
+        return yaml.dump(all_details, sort_keys=False)
 
     except Exception as e:
         return f"Error getting mutation details: {str(e)}"
@@ -279,6 +305,24 @@ def execute_query(query: str, variables: dict = None):
         return result
     except Exception as e:
         return f"Error executing query: {str(e)}"
+
+
+@mcp.tool()
+def get_authenticated_user_id():
+    """Get the ID of the currently authenticated user"""
+    try:
+        query = gql(
+            """
+        mutation GetAuthenticatedUserId {
+            getAuthenticatedUserId
+        }
+        """
+        )
+
+        result = client.execute(query)
+        return result.get("getAuthenticatedUserId")
+    except Exception as e:
+        return f"Error getting authenticated user ID: {str(e)}"
 
 
 # Helper functions
